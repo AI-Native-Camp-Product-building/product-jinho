@@ -18,7 +18,6 @@ function injectedScript(): string {
       }).catch(function(){});
     } catch(e) {}
   }
-  console.log('[bugside] script loaded, patching fetch...');
   var _error = console.error.bind(console);
   var _warn = console.warn.bind(console);
   console.error = function() { _error.apply(console, arguments); send('error', Array.from(arguments).map(String).join(' ')); };
@@ -31,12 +30,9 @@ function injectedScript(): string {
   window.fetch = function bugside_fetch(input, init) {
     var url = typeof input === 'string' ? input
       : (input instanceof Request ? input.url : String(input));
-    console.log('[bugside] fetch:', url.slice(0, 80));
     var p = _origFetch(input, init);
     if (url.includes('supabase') && url.includes('/rest/v1/')) {
-      console.log('[bugside] supabase hit:', url);
       p = p.then(function(res) {
-        console.log('[bugside] supabase status:', res.status);
         if (res.status >= 400) {
           res.clone().text().then(function(body) {
             var path = new URL(url).pathname;

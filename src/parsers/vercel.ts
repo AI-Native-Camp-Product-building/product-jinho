@@ -1,7 +1,19 @@
 import { BugError } from "../types.js";
 import { randomId } from "../utils.js";
 
+// vercel dev 성공/준비 상태 감지
+export function isVercelReady(line: string): boolean {
+  return line.includes("Ready!") || line.includes("Available at");
+}
+
 export function parseVercelLine(line: string): BugError | null {
+  // vercel dev 런타임 에러: "> Error! [GET] /path | Error: message"
+  const funcErrorMatch = line.match(/>\s*Error!\s*\[(\w+)\]\s*(\S+)\s*\|\s*(.+)/);
+  if (funcErrorMatch) {
+    const [, method, path, msg] = funcErrorMatch;
+    return makeError(`[${method}] ${path} — ${msg.trim()}`, undefined, extractFileRef(msg));
+  }
+
   // 빌드 실패
   if (line.includes("Error!") && line.includes("Build")) {
     return makeError("Build failed", line);

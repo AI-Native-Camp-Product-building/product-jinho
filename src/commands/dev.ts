@@ -2,6 +2,7 @@ import { render } from "ink";
 import React from "react";
 import { detectProject } from "../detect.js";
 import { parseNextjsLine, isNextjsCompileSuccess } from "../parsers/nextjs.js";
+import { parseVercelLine, isVercelReady } from "../parsers/vercel.js";
 import { startSupabaseProxy } from "../proxy.js";
 import { startBrowserProxy } from "../browser-proxy.js";
 import { startCollector } from "../collector.js";
@@ -83,6 +84,7 @@ export async function runDev({ port }: DevOptions) {
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
+        // 컴파일/준비 성공 → 해당 source 에러 클리어
         if (isNextjsCompileSuccess(line)) {
           if (errors.some((e) => e.source === "nextjs")) {
             errors.splice(0, errors.length, ...errors.filter((e) => e.source !== "nextjs"));
@@ -90,7 +92,14 @@ export async function runDev({ port }: DevOptions) {
           }
           continue;
         }
-        const err = parseNextjsLine(line);
+        if (isVercelReady(line)) {
+          if (errors.some((e) => e.source === "vercel")) {
+            errors.splice(0, errors.length, ...errors.filter((e) => e.source !== "vercel"));
+            rerender_();
+          }
+          continue;
+        }
+        const err = parseNextjsLine(line) ?? parseVercelLine(line);
         if (err) pushError(err);
       }
     });
