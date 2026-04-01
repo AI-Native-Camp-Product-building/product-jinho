@@ -19,30 +19,42 @@ export async function runDev({ port }: DevOptions) {
   const config = detectProject(cwd);
 
   const errors: BugError[] = [];
+  // dedup: 최근 3초 내 같은 메시지는 무시
+  const recentMessages = new Map<string, number>();
 
-  const { rerender, unmount } = render(
-    React.createElement(App, {
-      config,
-      errors: [...errors],
-      onClear: () => {
-        errors.length = 0;
-        rerender(React.createElement(App, { config, errors: [], onClear: () => {} }));
-      },
-    })
-  );
-
-  function pushError(err: BugError) {
-    errors.push(err);
+  function rerender_() {
     rerender(
       React.createElement(App, {
         config,
         errors: [...errors],
         onClear: () => {
           errors.length = 0;
-          rerender(React.createElement(App, { config, errors: [], onClear: () => {} }));
+          rerender_();
         },
       })
     );
+  }
+
+  const { rerender, unmount } = render(
+    React.createElement(App, {
+      config,
+      errors: [],
+      onClear: () => {
+        errors.length = 0;
+        rerender_();
+      },
+    })
+  );
+
+  function pushError(err: BugError) {
+    const key = `${err.source}:${err.message}`;
+    const now = Date.now();
+    const last = recentMessages.get(key) ?? 0;
+    if (now - last < 3000) return; // 3초 내 중복 무시
+    recentMessages.set(key, now);
+
+    errors.push(err);
+    rerender_();
   }
 
   // 브라우저 에러 수신 서버 (항상 시작)
@@ -67,19 +79,9 @@ export async function runDev({ port }: DevOptions) {
     const handleLine = (line: string) => {
       if (isNextjsCompileSuccess(line)) {
         // 컴파일 성공 → Next.js 에러 전부 제거
-        const idx = errors.findIndex((e) => e.source === "nextjs");
-        if (idx !== -1) {
+        if (errors.some((e) => e.source === "nextjs")) {
           errors.splice(0, errors.length, ...errors.filter((e) => e.source !== "nextjs"));
-          rerender(
-            React.createElement(App, {
-              config,
-              errors: [...errors],
-              onClear: () => {
-                errors.length = 0;
-                rerender(React.createElement(App, { config, errors: [], onClear: () => {} }));
-              },
-            })
-          );
+          rerender_();
         }
         return;
       }
