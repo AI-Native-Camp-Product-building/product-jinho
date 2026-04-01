@@ -6,12 +6,16 @@ program
   .version("0.1.0");
 
 program
-  .command("dev")
-  .description("Start monitoring — runs next dev and watches all error sources")
-  .option("-p, --port <number>", "Next.js dev server port", "3000")
-  .action(async (opts) => {
+  .command("dev [port]")
+  .description(
+    "Start monitoring (browser proxy :port+1, Supabase proxy)\n" +
+    "  Usage: npx bugside dev [port]        — browser errors only\n" +
+    "         npm run dev | npx bugside dev  — terminal + browser errors"
+  )
+  .action(async (portArg?: string) => {
+    const port = portArg ? parseInt(portArg, 10) : 3000;
     const { runDev } = await import("./commands/dev.js");
-    await runDev({ port: parseInt(opts.port, 10) });
+    await runDev({ port });
   });
 
 // 인자 없이 실행하면 dev로 기본 동작

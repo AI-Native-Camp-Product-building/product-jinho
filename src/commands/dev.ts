@@ -1,9 +1,7 @@
-import { spawn } from "child_process";
 import { render } from "ink";
 import React from "react";
 import { detectProject } from "../detect.js";
 import { parseNextjsLine, isNextjsCompileSuccess } from "../parsers/nextjs.js";
-import { parseVercelLine } from "../parsers/vercel.js";
 import { startSupabaseProxy } from "../proxy.js";
 import { startBrowserProxy } from "../browser-proxy.js";
 import { startCollector } from "../collector.js";
@@ -19,7 +17,6 @@ export async function runDev({ port }: DevOptions) {
   const config = detectProject(cwd);
 
   const errors: BugError[] = [];
-  // dedup: 최근 3초 내 같은 메시지는 무시
   const recentMessages = new Map<string, number>();
 
   function rerender_() {
@@ -35,7 +32,7 @@ export async function runDev({ port }: DevOptions) {
     );
   }
 
-  const { rerender, unmount } = render(
+  const { rerender } = render(
     React.createElement(App, {
       config,
       errors: [],
@@ -49,90 +46,47 @@ export async function runDev({ port }: DevOptions) {
   function pushError(err: BugError) {
     const key = `${err.source}:${err.message}`;
     const now = Date.now();
-    const last = recentMessages.get(key) ?? 0;
-    if (now - last < 3000) return; // 3초 내 중복 무시
+    if ((recentMessages.get(key) ?? 0) > now - 3000) return;
     recentMessages.set(key, now);
-
     errors.push(err);
     rerender_();
   }
 
-  // 브라우저 에러 수신 서버 (항상 시작)
+  // 브라우저 에러 수신 서버
   startCollector(pushError);
 
-  // 브라우저 프록시 (HTML에 스크립트 주입, :3001 → :port)
-  if (config.hasNextjs) {
-    startBrowserProxy(port);
-  }
-
-  // Next.js dev server spawn
-  if (config.hasNextjs) {
-    const nextProcess = spawn("npx", ["next", "dev", "--port", String(port)], {
-      cwd,
-      env: { ...process.env },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    nextProcess.stdout.setEncoding("utf-8");
-    nextProcess.stderr.setEncoding("utf-8");
-
-    const handleLine = (line: string) => {
-      if (isNextjsCompileSuccess(line)) {
-        // 컴파일 성공 → Next.js 에러 전부 제거
-        if (errors.some((e) => e.source === "nextjs")) {
-          errors.splice(0, errors.length, ...errors.filter((e) => e.source !== "nextjs"));
-          rerender_();
-        }
-        return;
-      }
-      const err = parseNextjsLine(line);
-      if (err) pushError(err);
-    };
-
-    let buffer = "";
-    const onData = (chunk: string) => {
-      buffer += chunk;
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) handleLine(line);
-    };
-
-    nextProcess.stdout.on("data", onData);
-    nextProcess.stderr.on("data", onData);
-
-    nextProcess.on("exit", () => unmount());
-  }
+  // 브라우저 프록시 (:3001 → :port)
+  startBrowserProxy(port);
 
   // Supabase 프록시
   if (config.hasSupabase && config.supabaseUrl) {
     startSupabaseProxy(config.supabaseUrl, pushError);
   }
 
-  // Vercel dev spawn
-  if (config.hasVercel) {
-    const vercelProcess = spawn("npx", ["vercel", "dev"], {
-      cwd,
-      env: { ...process.env },
-      stdio: ["ignore", "pipe", "pipe"],
+  // stdin 파이프 감지 — next dev 2>&1 | bugside 로 실행한 경우
+  const isPiped = !process.stdin.isTTY;
+  if (isPiped) {
+    process.stdin.setEncoding("utf-8");
+
+    let buffer = "";
+    process.stdin.on("data", (chunk: string) => {
+      buffer += chunk;
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (isNextjsCompileSuccess(line)) {
+          if (errors.some((e) => e.source === "nextjs")) {
+            errors.splice(0, errors.length, ...errors.filter((e) => e.source !== "nextjs"));
+            rerender_();
+          }
+          continue;
+        }
+        const err = parseNextjsLine(line);
+        if (err) pushError(err);
+      }
     });
 
-    vercelProcess.stdout.setEncoding("utf-8");
-    vercelProcess.stderr.setEncoding("utf-8");
-
-    const handleVercelLine = (line: string) => {
-      const err = parseVercelLine(line);
-      if (err) pushError(err);
-    };
-
-    let vercelBuffer = "";
-    const onVercelData = (chunk: string) => {
-      vercelBuffer += chunk;
-      const lines = vercelBuffer.split("\n");
-      vercelBuffer = lines.pop() ?? "";
-      for (const line of lines) handleVercelLine(line);
-    };
-
-    vercelProcess.stdout.on("data", onVercelData);
-    vercelProcess.stderr.on("data", onVercelData);
+    process.stdin.on("end", () => process.exit(0));
   }
 }
