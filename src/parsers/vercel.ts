@@ -1,0 +1,72 @@
+import { BugError } from "../types.js";
+import { randomId } from "../utils.js";
+
+export function parseVercelLine(line: string): BugError | null {
+  // 빌드 실패
+  if (line.includes("Error!") && line.includes("Build")) {
+    return makeError("Build failed", line);
+  }
+
+  if (line.includes("Build failed")) {
+    return makeError("Build failed", extractBuildDetail(line));
+  }
+
+  // TypeScript 에러
+  if (/Type '.*' is not assignable/.test(line)) {
+    return makeError(line.trim(), undefined, extractFileRef(line));
+  }
+
+  // 환경변수 누락
+  if (
+    line.includes("env") &&
+    (line.includes("undefined") || line.includes("missing") || line.includes("not found"))
+  ) {
+    return makeError("Missing environment variable", line.trim());
+  }
+
+  // 함수 타임아웃
+  if (line.includes("FUNCTION_INVOCATION_TIMEOUT") || line.includes("Task timed out")) {
+    return makeError("Function timeout", line.trim());
+  }
+
+  // vercel dev 런타임 에러
+  if (line.startsWith("Error:") || line.startsWith("  Error:")) {
+    return makeError(line.trim(), undefined, extractFileRef(line));
+  }
+
+  return null;
+}
+
+function makeError(
+  message: string,
+  detail?: string,
+  fileRef?: { file: string; line?: number }
+): BugError {
+  return {
+    id: randomId(),
+    source: "vercel",
+    timestamp: new Date(),
+    message: message.slice(0, 200),
+    detail,
+    file: fileRef?.file,
+    line: fileRef?.line,
+    resolved: false,
+  };
+}
+
+function extractBuildDetail(line: string): string {
+  return line
+    .replace(/^\[.*?\]\s*/, "")
+    .replace(/^Error!?\s*/i, "")
+    .trim()
+    .slice(0, 150);
+}
+
+function extractFileRef(line: string): { file: string; line?: number } | undefined {
+  const match = line.match(/([./\w-]+\.(tsx?|jsx?|css|scss))(?::(\d+))?/);
+  if (!match) return undefined;
+  return {
+    file: match[1],
+    line: match[3] ? parseInt(match[3], 10) : undefined,
+  };
+}
