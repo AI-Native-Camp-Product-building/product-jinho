@@ -4,6 +4,7 @@ import React from "react";
 import { detectProject } from "../detect.js";
 import { parseNextjsLine } from "../parsers/nextjs.js";
 import { parseVercelLine } from "../parsers/vercel.js";
+import { startSupabaseProxy } from "../proxy.js";
 import { App } from "../ui/App.js";
 import { BugError } from "../types.js";
 
@@ -72,6 +73,36 @@ export async function runDev({ port }: DevOptions) {
     nextProcess.on("exit", () => unmount());
   }
 
-  // TODO: Supabase proxy (src/proxy.ts)
-  // TODO: Vercel dev spawn + parseVercelLine
+  // Supabase 프록시
+  if (config.hasSupabase && config.supabaseUrl) {
+    startSupabaseProxy(config.supabaseUrl, pushError);
+  }
+
+  // Vercel dev spawn
+  if (config.hasVercel) {
+    const vercelProcess = spawn("npx", ["vercel", "dev"], {
+      cwd,
+      env: { ...process.env },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    vercelProcess.stdout.setEncoding("utf-8");
+    vercelProcess.stderr.setEncoding("utf-8");
+
+    const handleVercelLine = (line: string) => {
+      const err = parseVercelLine(line);
+      if (err) pushError(err);
+    };
+
+    let vercelBuffer = "";
+    const onVercelData = (chunk: string) => {
+      vercelBuffer += chunk;
+      const lines = vercelBuffer.split("\n");
+      vercelBuffer = lines.pop() ?? "";
+      for (const line of lines) handleVercelLine(line);
+    };
+
+    vercelProcess.stdout.on("data", onVercelData);
+    vercelProcess.stderr.on("data", onVercelData);
+  }
 }
