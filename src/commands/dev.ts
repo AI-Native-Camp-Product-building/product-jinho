@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import { render } from "ink";
 import React from "react";
 import { detectProject } from "../detect.js";
-import { parseNextjsLine } from "../parsers/nextjs.js";
+import { parseNextjsLine, isNextjsCompileSuccess } from "../parsers/nextjs.js";
 import { parseVercelLine } from "../parsers/vercel.js";
 import { startSupabaseProxy } from "../proxy.js";
 import { startBrowserProxy } from "../browser-proxy.js";
@@ -65,6 +65,24 @@ export async function runDev({ port }: DevOptions) {
     nextProcess.stderr.setEncoding("utf-8");
 
     const handleLine = (line: string) => {
+      if (isNextjsCompileSuccess(line)) {
+        // 컴파일 성공 → Next.js 에러 전부 제거
+        const idx = errors.findIndex((e) => e.source === "nextjs");
+        if (idx !== -1) {
+          errors.splice(0, errors.length, ...errors.filter((e) => e.source !== "nextjs"));
+          rerender(
+            React.createElement(App, {
+              config,
+              errors: [...errors],
+              onClear: () => {
+                errors.length = 0;
+                rerender(React.createElement(App, { config, errors: [], onClear: () => {} }));
+              },
+            })
+          );
+        }
+        return;
+      }
       const err = parseNextjsLine(line);
       if (err) pushError(err);
     };

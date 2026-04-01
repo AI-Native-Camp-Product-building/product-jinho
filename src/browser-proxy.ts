@@ -75,10 +75,12 @@ export function startBrowserProxy(nextPort: number): { port: number; stop: () =>
   });
 
   const server = http.createServer((req, res) => {
-    const contentType = req.headers["accept"] ?? "";
-    const isHtmlRequest = contentType.includes("text/html");
+    const accept = req.headers["accept"] ?? "";
+    const isHtmlRequest = accept.includes("text/html");
 
     if (isHtmlRequest) {
+      // gzip 압축 비활성화 — 스크립트 주입을 위해 plain text 필요
+      req.headers["accept-encoding"] = "identity";
       htmlProxy.web(req, res);
     } else {
       passProxy.web(req, res);

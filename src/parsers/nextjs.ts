@@ -1,6 +1,17 @@
 import { BugError } from "../types.js";
 import { randomId } from "../utils.js";
 
+// Next.js 컴파일 성공 감지 — true면 해당 source 에러 전부 제거
+export function isNextjsCompileSuccess(line: string): boolean {
+  return (
+    line.includes("✓ Compiled") ||
+    line.includes("✓ Ready") ||
+    line.includes("compiled successfully") ||
+    // Turbopack
+    (line.includes("Compiled") && line.includes(" in "))
+  );
+}
+
 // Next.js dev server stdout 라인을 파싱해서 에러 반환
 // 에러가 아니면 null
 export function parseNextjsLine(line: string): BugError | null {
