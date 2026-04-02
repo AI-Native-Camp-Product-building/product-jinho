@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Text, useInput, useApp, useStdin } from "ink";
+import { Box, Text, useInput, useApp, useStdin, useStdout } from "ink";
 import { BugError, ProjectConfig } from "../types.js";
 import { ErrorCard } from "./ErrorCard.js";
 
@@ -18,8 +18,19 @@ function KeyboardHandler({ onClear }: { onClear: () => void }) {
   return null;
 }
 
+// 에러 카드 한 장당 최소 줄 수 (border 2 + source/time 1 + message 1 + marginBottom 1)
+const LINES_PER_CARD = 5;
+// 헤더(3) + 상태바(2) + 패딩(2)
+const FIXED_OVERHEAD = 7;
+
 export function App({ config, errors, onClear }: Props) {
   const { isRawModeSupported } = useStdin();
+  const { stdout } = useStdout();
+
+  const rows = stdout.rows ?? 24;
+  const maxVisible = Math.max(1, Math.floor((rows - FIXED_OVERHEAD) / LINES_PER_CARD));
+  const visibleErrors = errors.slice(-maxVisible);
+  const hiddenCount = errors.length - visibleErrors.length;
 
   const unresolvedCount = errors.filter((e) => !e.resolved).length;
 
@@ -30,7 +41,7 @@ export function App({ config, errors, onClear }: Props) {
   ].filter(Boolean) as string[];
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <Box flexDirection="column" height={rows} paddingX={1} paddingTop={1} overflow="hidden">
       {isRawModeSupported && <KeyboardHandler onClear={onClear} />}
       {/* 헤더 */}
       <Box marginBottom={1} gap={2}>
@@ -46,7 +57,12 @@ export function App({ config, errors, onClear }: Props) {
           <Text dimColor>No errors — all clear</Text>
         </Box>
       ) : (
-        errors.map((err) => <ErrorCard key={err.id} error={err} />)
+        <>
+          {hiddenCount > 0 && (
+            <Text dimColor>  ↑ {hiddenCount} older error{hiddenCount !== 1 ? "s" : ""} (c to clear)</Text>
+          )}
+          {visibleErrors.map((err) => <ErrorCard key={err.id} error={err} />)}
+        </>
       )}
 
       {/* 상태 바 */}

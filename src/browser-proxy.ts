@@ -66,11 +66,13 @@ export function startBrowserProxy(nextPort: number): { port: number; stop: () =>
   const htmlProxy = httpProxy.createProxyServer({
     target: `http://localhost:${nextPort}`,
     selfHandleResponse: true,
+    changeOrigin: true,
   });
 
   // 일반 요청용 프록시 (pass-through)
   const passProxy = httpProxy.createProxyServer({
     target: `http://localhost:${nextPort}`,
+    changeOrigin: true,
   });
 
   htmlProxy.on("proxyRes", (proxyRes, _req, res) => {

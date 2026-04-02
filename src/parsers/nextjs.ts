@@ -38,9 +38,9 @@ export function parseNextjsLine(line: string): BugError | null {
     return makeError("nextjs", "Hydration mismatch", line, extractFileRef(line));
   }
 
-  // 런타임 에러: "Error: msg" 또는 "⨯ Error: msg" (Next.js 16 에러 심볼)
-  if (/^[⨯✗×]?\s*(Error|TypeError|ReferenceError|RangeError):/.test(line.trim())) {
-    return makeError("nextjs", line.replace(/^[⨯✗×]\s*/, "").trim(), undefined, extractFileRef(line));
+  // 순수 런타임 에러 (⨯ 없는 경우만 — ⨯는 vercel.ts에서 처리)
+  if (/^\s*(Error|TypeError|ReferenceError|RangeError):/.test(line)) {
+    return makeError("nextjs", line.trim(), undefined, extractFileRef(line));
   }
 
   // 빌드 실패
