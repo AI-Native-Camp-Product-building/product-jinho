@@ -9,6 +9,12 @@ const SOURCE_COLOR: Record<ErrorSource, string> = {
   vercel: "blue",
 };
 
+const SOURCE_BG: Record<ErrorSource, string> = {
+  nextjs: "red",
+  supabase: "yellow",
+  vercel: "blue",
+};
+
 const SOURCE_LABEL: Record<ErrorSource, string> = {
   nextjs: "Next.js",
   supabase: "Supabase",
@@ -17,18 +23,24 @@ const SOURCE_LABEL: Record<ErrorSource, string> = {
 
 export function ErrorCard({ error }: { error: BugError }) {
   const color = SOURCE_COLOR[error.source];
+  const bg = SOURCE_BG[error.source];
   const label = SOURCE_LABEL[error.source];
 
   return (
-    <Box flexDirection="column" borderStyle="single" borderColor={color} paddingX={1} marginBottom={1}>
+    <Box flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} marginBottom={1}>
+      {/* 헤더 행: [소스 배지] 메시지  시간 */}
       <Box gap={1}>
-        <Text color={color} bold>{label}</Text>
+        <Text backgroundColor={bg} color="white" bold> {label} </Text>
+        <Text color={color} bold wrap="truncate">{error.message}</Text>
         <Text dimColor>{formatTime(error.timestamp)}</Text>
       </Box>
-      <Text>{error.message}</Text>
-      {error.detail && <Text dimColor>{error.detail}</Text>}
+      {/* 상세 / 스택 */}
+      {error.detail && (
+        <Text color="white" dimColor>  {error.detail}</Text>
+      )}
+      {/* 파일 위치 */}
       {error.file && (
-        <Text dimColor>→ {error.file}{error.line ? `:${error.line}` : ""}</Text>
+        <Text color={color} dimColor>  → {error.file}{error.line ? `:${error.line}` : ""}</Text>
       )}
     </Box>
   );
