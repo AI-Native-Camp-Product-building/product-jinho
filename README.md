@@ -1,17 +1,85 @@
 # Bugside
 
-## 누구의 어떤 문제를 푸는가
-Next.js + Supabase + Vercel 스택으로 개발하는 Claude Code 사용자가,
-에러를 확인하러 브라우저/대시보드를 전환하는 반복적인 컨텍스트 스위칭을 없애준다.
+See all your Next.js, Supabase, and Vercel errors in one terminal pane — no browser switching.
 
-## 핵심 동작 1개
-`npx bugside` 한 줄로 터미널 옆 패널에 실행하면,
-Next.js 런타임 에러 · Supabase API 오류 · Vercel 빌드 실패를 실시간으로 한 곳에서 확인한다.
+```
+npm run dev 2>&1 | npx bugside dev
+```
 
-## 누구에게 보여줄 것인가
-Claude Code로 풀스택 개발을 하는 개발자들.
-특히 Next.js + Supabase + Vercel을 표준 스택으로 쓰는 사람들.
+![Bugside TUI screenshot](https://bugside.vercel.app/og.png)
 
 ---
 
-**랜딩 페이지:** https://bugside.vercel.app
+## Why
+
+When building with Next.js + Supabase + Vercel, errors are scattered across:
+- Terminal (Next.js runtime/compile errors)
+- Browser console (client-side errors, Supabase API failures)
+- Vercel dashboard (build/function errors)
+
+Bugside consolidates all three into one always-visible terminal panel, so you never lose focus.
+
+---
+
+## Install
+
+```bash
+npm install -g bugside
+# or use without installing
+npx bugside dev
+```
+
+---
+
+## Usage
+
+### Pipe from `next dev`
+
+```bash
+npm run dev 2>&1 | npx bugside dev
+```
+
+### With `vercel dev`
+
+```bash
+vercel dev 2>&1 | npx bugside dev
+```
+
+Bugside reads stdin and automatically opens a proxy on port `3001`. Browse your app at `http://localhost:3001` instead of `localhost:3000` to capture browser and Supabase errors.
+
+---
+
+## What it captures
+
+| Source | Errors |
+|--------|--------|
+| **Next.js** | Runtime errors (`⨯`), compile failures, hydration mismatches, type errors |
+| **Supabase** | API errors (4xx/5xx from `/rest/v1/` requests), network failures |
+| **Vercel** | Function errors, HTTP 5xx, build failures |
+
+---
+
+## How it works
+
+1. **Stdin parser** — strips ANSI codes and parses Next.js/Vercel log lines using official log symbols (`⨯` `✓` `⚠`)
+2. **Browser proxy** — runs on `:3001`, injects a script that intercepts `window.fetch` and `window.onerror`, sends errors to a local collector
+3. **Supabase proxy** — same proxy intercepts Supabase REST API calls and reports 4xx/5xx responses
+4. **TUI** — renders errors in a fullscreen Ink (React) panel with source badges, timestamps, and file locations
+
+---
+
+## Options
+
+```
+bugside dev [options]
+
+Options:
+  -p, --port <port>  Next.js dev server port (default: 3000)
+  -h, --help         display help
+```
+
+---
+
+## Landing page
+
+[bugside.vercel.app](https://bugside.vercel.app)
