@@ -91,10 +91,8 @@ export async function runDev({ port }: DevOptions) {
 
   // stdin 파이프 감지 — next dev 2>&1 | bugside 로 실행한 경우
   const isPiped = !process.stdin.isTTY;
-  if (!isPiped) {
-    // standalone 모드: 3초 뒤 열기
-    setTimeout(openOnce, 3000);
-  }
+  // 파이프/standalone 모두 최대 10초 안에 fallback으로 열기
+  setTimeout(openOnce, isPiped ? 10000 : 3000);
   if (isPiped) {
     process.stdin.setEncoding("utf-8");
 
