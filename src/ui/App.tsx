@@ -1,44 +1,15 @@
-import React, { useState } from "react";
-import { Box, Text, useInput, useApp, useStdin, useStdout } from "ink";
+import React from "react";
+import { Box, Text, useStdin, useStdout } from "ink";
 import { BugError, ProjectConfig } from "../types.js";
 import { ErrorCard } from "./ErrorCard.js";
-import { openInEditor } from "../editor.js";
 
 interface Props {
   config: ProjectConfig;
   errors: BugError[];
   onClear: () => void;
   cwd: string;
-}
-
-function KeyboardHandler({
-  onClear,
-  errors,
-  selectedIdx,
-  setSelectedIdx,
-  cwd,
-}: {
-  onClear: () => void;
-  errors: BugError[];
   selectedIdx: number;
-  setSelectedIdx: (i: number) => void;
-  cwd: string;
-}) {
-  const { exit } = useApp();
-  useInput((input, key) => {
-    if (input === "q" || (key.ctrl && input === "c")) {
-      exit();
-      process.nextTick(() => process.exit(0));
-    }
-    if (input === "c") onClear();
-    if (key.upArrow) setSelectedIdx(Math.max(0, selectedIdx - 1));
-    if (key.downArrow) setSelectedIdx(Math.min(errors.length - 1, selectedIdx + 1));
-    if (key.return) {
-      const err = errors[selectedIdx];
-      if (err?.file) openInEditor(err.file, err.line, cwd);
-    }
-  });
-  return null;
+  hasKeyboard: boolean;
 }
 
 // 에러 카드 한 장당 최소 줄 수 (border 2 + source/time 1 + message 1 + marginBottom 1)
@@ -46,10 +17,9 @@ const LINES_PER_CARD = 5;
 // 헤더(3) + 상태바(2) + 패딩(2)
 const FIXED_OVERHEAD = 7;
 
-export function App({ config, errors, onClear, cwd }: Props) {
-  const { isRawModeSupported } = useStdin();
+export function App({ config, errors, onClear: _onClear, cwd: _cwd, selectedIdx, hasKeyboard }: Props) {
   const { stdout } = useStdout();
-  const [selectedIdx, setSelectedIdx] = useState(0);
+  useStdin(); // context 유지용
 
   const rows = stdout.rows ?? 24;
   const maxVisible = Math.max(1, Math.floor((rows - FIXED_OVERHEAD) / LINES_PER_CARD));
@@ -70,21 +40,12 @@ export function App({ config, errors, onClear, cwd }: Props) {
 
   return (
     <Box flexDirection="column" height={rows} paddingX={1} paddingTop={1} overflow="hidden">
-      {isRawModeSupported && (
-        <KeyboardHandler
-          onClear={onClear}
-          errors={errors}
-          selectedIdx={clampedSelected}
-          setSelectedIdx={setSelectedIdx}
-          cwd={cwd}
-        />
-      )}
       {/* 헤더 */}
       <Box marginBottom={1} gap={2}>
         <Text bold>bugside</Text>
         <Text dimColor>watching: {sources.join(" · ")}</Text>
         <Text dimColor>│</Text>
-        {isRawModeSupported && <Text dimColor>↑↓ select  ↵ open  c clear  q quit</Text>}
+        {hasKeyboard && <Text dimColor>↑↓ select  ↵ open  c clear  q quit</Text>}
       </Box>
 
       {/* 에러 목록 */}
@@ -110,7 +71,7 @@ export function App({ config, errors, onClear, cwd }: Props) {
               <ErrorCard
                 key={err.id}
                 error={err}
-                selected={isRawModeSupported && absIdx === clampedSelected}
+                selected={hasKeyboard && absIdx === clampedSelected}
               />
             );
           })}

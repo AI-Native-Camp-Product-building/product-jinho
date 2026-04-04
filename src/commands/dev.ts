@@ -10,6 +10,7 @@ import { startSupabaseProxy } from "../proxy.js";
 import { startBrowserProxy } from "../browser-proxy.js";
 import { startCollector } from "../collector.js";
 import { appendHistory } from "../history.js";
+import { openInEditor } from "../editor.js";
 import { App } from "../ui/App.js";
 import { BugError } from "../types.js";
 
@@ -44,8 +45,16 @@ export async function runDev({ port }: DevOptions) {
   const config = detectProject(cwd);
   const isPiped = !process.stdin.isTTY;
   const ttyStdin = isPiped ? openTtyStdin() : undefined;
+  const hasKeyboard = !!(ttyStdin ?? (!isPiped && process.stdin.isTTY));
 
   const errors: BugError[] = [];
+  let selectedIdx = 0;
+
+  function clear() {
+    errors.length = 0;
+    selectedIdx = 0;
+    rerender_();
+  }
 
   function rerender_() {
     rerender(
@@ -53,10 +62,9 @@ export async function runDev({ port }: DevOptions) {
         config,
         cwd,
         errors: [...errors],
-        onClear: () => {
-          errors.length = 0;
-          rerender_();
-        },
+        onClear: clear,
+        selectedIdx,
+        hasKeyboard,
       })
     );
   }
@@ -66,13 +74,34 @@ export async function runDev({ port }: DevOptions) {
       config,
       cwd,
       errors: [],
-      onClear: () => {
-        errors.length = 0;
-        rerender_();
-      },
-    }),
-    ttyStdin ? { stdin: ttyStdin, exitOnCtrlC: true } : undefined
+      onClear: clear,
+      selectedIdx: 0,
+      hasKeyboard,
+    })
   );
+
+  // 키보드 처리 — ttyStdin(파이프 모드) 또는 process.stdin(standalone)
+  const kbStream = ttyStdin ?? (!isPiped ? process.stdin : undefined);
+  if (kbStream) {
+    if (!isPiped && process.stdin.isTTY) {
+      try { process.stdin.setRawMode(true); } catch {}
+    }
+    kbStream.on("data", (chunk: Buffer) => {
+      const key = chunk.toString("utf-8");
+      if (key === "q" || key === "\x03") process.exit(0);          // q / Ctrl+C
+      if (key === "c") { clear(); return; }
+      if (key === "\x1b[A") {                                       // ↑
+        selectedIdx = Math.max(0, selectedIdx - 1);
+        rerender_();
+      } else if (key === "\x1b[B") {                               // ↓
+        selectedIdx = Math.min(errors.length - 1, selectedIdx + 1);
+        rerender_();
+      } else if (key === "\r" || key === "\n") {                   // Enter
+        const err = errors[selectedIdx];
+        if (err?.file) openInEditor(err.file, err.line, cwd);
+      }
+    });
+  }
 
 
   function pushError(err: BugError) {
