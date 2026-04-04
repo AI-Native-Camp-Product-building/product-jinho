@@ -51,8 +51,12 @@ function injectedScript(): string {
         }
         return res;
       }).catch(function(err) {
-        var type = isSupabase ? 'supabase-error' : 'network-error';
-        send(type, 'Network error: ' + path);
+        // 연결 에러는 API 경로(/api/, supabase)만 보고
+        if (isSupabase) {
+          send('supabase-error', 'Network error: ' + path);
+        } else if (path.includes('/api/')) {
+          send('network-error', 'Network error: ' + path);
+        }
         throw err;
       });
     }
