@@ -5,7 +5,7 @@ import { randomId } from "./utils.js";
 const COLLECTOR_PORT = 54321;
 
 interface BrowserErrorPayload {
-  type: "error" | "warn" | "unhandledrejection" | "page-load" | "supabase-error";
+  type: "error" | "warn" | "unhandledrejection" | "page-load" | "supabase-error" | "network-error";
   message: string;
   source?: string;
   lineno?: number;
@@ -70,11 +70,23 @@ function parseBrowserError(payload: BrowserErrorPayload): BugError | null {
 
   if (!message) return null;
 
-  // Supabase fetch 인터셉터에서 온 에러
+  // Supabase fetch 에러
   if (type === "supabase-error") {
     return {
       id: randomId(),
       source: "supabase",
+      timestamp: new Date(),
+      message: message.slice(0, 200),
+      detail: stack ? stack.slice(0, 150) : undefined,
+      resolved: false,
+    };
+  }
+
+  // 일반 HTTP 에러 (API routes, 외부 fetch 등)
+  if (type === "network-error") {
+    return {
+      id: randomId(),
+      source: "network",
       timestamp: new Date(),
       message: message.slice(0, 200),
       detail: stack ? stack.slice(0, 150) : undefined,

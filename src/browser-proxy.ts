@@ -25,29 +25,34 @@ function injectedScript(): string {
   window.addEventListener('error', function(e) { send('error', e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack); });
   window.addEventListener('unhandledrejection', function(e) { send('unhandledrejection', 'Unhandled Promise: ' + (e.reason instanceof Error ? e.reason.message : String(e.reason))); });
 
-  // Supabase fetch 인터셉터
+  // fetch 에러 인터셉터 (Supabase + 모든 API)
+  var STATIC_EXT = /\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|map|webp|avif)$/i;
   var _origFetch = window.fetch.bind(window);
   window.fetch = function bugside_fetch(input, init) {
     var url = typeof input === 'string' ? input
       : (input instanceof Request ? input.url : String(input));
     var p = _origFetch(input, init);
-    if (url.includes('supabase') && url.includes('/rest/v1/')) {
+    var isSupabase = url.includes('supabase') && url.includes('/rest/v1/');
+    var path = '';
+    try { path = new URL(url).pathname; } catch(e) { path = url; }
+    var isStatic = STATIC_EXT.test(path);
+    if (!isStatic) {
       p = p.then(function(res) {
         if (res.status >= 400) {
           res.clone().text().then(function(body) {
-            var path = new URL(url).pathname;
             var detail = '';
             try {
               var j = JSON.parse(body);
-              detail = j.hint || j.message || j.error_description || body.slice(0, 100);
-            } catch(e) { detail = body.slice(0, 100); }
-            send('supabase-error', res.status + ' ' + path, undefined, undefined, undefined, detail);
+              detail = j.hint || j.message || j.error || j.error_description || body.slice(0, 120);
+            } catch(e) { detail = body.slice(0, 120); }
+            var type = isSupabase ? 'supabase-error' : 'network-error';
+            send(type, res.status + ' ' + path, undefined, undefined, undefined, detail);
           });
         }
         return res;
       }).catch(function(err) {
-        var path = new URL(url).pathname;
-        send('supabase-error', 'Network error: ' + path);
+        var type = isSupabase ? 'supabase-error' : 'network-error';
+        send(type, 'Network error: ' + path);
         throw err;
       });
     }

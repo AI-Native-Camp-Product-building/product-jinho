@@ -1,4 +1,4 @@
-export type ErrorSource = "nextjs" | "supabase" | "vercel";
+export type ErrorSource = "nextjs" | "supabase" | "vercel" | "network";
 
 export interface BugError {
   id: string;

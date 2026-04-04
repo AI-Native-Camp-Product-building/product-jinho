@@ -7,18 +7,21 @@ const SOURCE_COLOR: Record<ErrorSource, string> = {
   nextjs: "red",
   supabase: "yellow",
   vercel: "blue",
+  network: "magenta",
 };
 
 const SOURCE_BG: Record<ErrorSource, string> = {
   nextjs: "red",
   supabase: "yellow",
   vercel: "blue",
+  network: "magenta",
 };
 
 const SOURCE_LABEL: Record<ErrorSource, string> = {
   nextjs: "Next.js",
   supabase: "Supabase",
   vercel: "Vercel",
+  network: "Network",
 };
 
 export function ErrorCard({ error, selected }: { error: BugError; selected?: boolean }) {

@@ -60,6 +60,7 @@ export function App({ config, errors, onClear, cwd }: Props) {
     config.hasNextjs && "Next.js",
     config.hasSupabase && "Supabase",
     config.hasVercel && "Vercel",
+    "Network",
   ].filter(Boolean) as string[];
 
   const clampedSelected = Math.min(selectedIdx, Math.max(0, errors.length - 1));
