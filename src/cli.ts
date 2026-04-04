@@ -18,6 +18,14 @@ program
     await runDev({ port });
   });
 
+program
+  .command("init")
+  .description('Add "dev:debug" script to package.json in current directory')
+  .action(async () => {
+    const { runInit } = await import("./commands/init.js");
+    runInit();
+  });
+
 // 인자 없이 실행하면 dev로 기본 동작
 if (process.argv.length === 2) {
   process.argv.push("dev");

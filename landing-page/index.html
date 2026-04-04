@@ -380,6 +380,23 @@
   <h2 data-i18n="install.h2"></h2>
   <p class="section-sub" data-i18n="install.sub"></p>
   <div class="install-grid">
+    <div class="install-card" style="border-color: rgba(124,106,247,0.4);">
+      <div class="install-card-header">
+        <h3 data-i18n="install.method0.title"></h3>
+        <p data-i18n="install.method0.desc"></p>
+      </div>
+      <div class="install-code">
+        <div class="code-line">
+          <span class="code-prompt">$</span>
+          <span class="code-cmd">npx bugside init</span>
+        </div>
+        <div class="code-line" style="margin-top:4px;">
+          <span class="code-prompt">$</span>
+          <span class="code-cmd">npm run dev:debug</span>
+        </div>
+        <div class="code-comment" data-i18n="install.method0.comment"></div>
+      </div>
+    </div>
     <div class="install-card">
       <div class="install-card-header">
         <h3 data-i18n="install.method1.title"></h3>
@@ -391,23 +408,6 @@
           <span class="code-cmd">npm run dev 2>&amp;1 | npx bugside dev</span>
         </div>
         <div class="code-comment" data-i18n="install.method1.comment"></div>
-      </div>
-    </div>
-    <div class="install-card">
-      <div class="install-card-header">
-        <h3 data-i18n="install.method2.title"></h3>
-        <p data-i18n="install.method2.desc"></p>
-      </div>
-      <div class="install-code">
-        <div class="code-line">
-          <span class="code-prompt">$</span>
-          <span class="code-cmd">npm run dev</span>
-        </div>
-        <div class="code-line">
-          <span class="code-prompt">$</span>
-          <span class="code-cmd">npx bugside dev</span>
-        </div>
-        <div class="code-comment" data-i18n="install.method2.comment"></div>
       </div>
     </div>
   </div>
@@ -481,6 +481,9 @@
       'install.label':          '설치 & 실행',
       'install.h2':             '한 줄이면 됩니다',
       'install.sub':            'npx로 바로 쓰거나, 전역 설치 없이 파이프로 연결하세요.',
+      'install.method0.title':  '자동 설정 (권장)',
+      'install.method0.desc':   'bugside init 을 실행하면 package.json 에 dev:debug 스크립트를 자동으로 추가합니다.',
+      'install.method0.comment':'# package.json 에 dev:debug 스크립트 추가 후 실행',
       'install.method1.title':  '파이프 모드 (권장)',
       'install.method1.desc':   'next dev 출력을 바로 bugside로 연결합니다. Next.js 터미널 에러를 즉시 파싱합니다.',
       'install.method1.comment':'# next dev 와 bugside 를 동시에 실행',
@@ -539,7 +542,10 @@
       'install.label':          'Install & Run',
       'install.h2':             'One command to start.',
       'install.sub':            'Use npx directly or pipe your dev server output into Bugside.',
-      'install.method1.title':  'Pipe mode (recommended)',
+      'install.method0.title':  'Auto setup (recommended)',
+      'install.method0.desc':   'Run bugside init to automatically add the dev:debug script to your package.json.',
+      'install.method0.comment':'# adds dev:debug to package.json, then runs it',
+      'install.method1.title':  'Pipe mode (manual)',
       'install.method1.desc':   'Pipe next dev output directly into Bugside. Terminal errors are parsed in real time.',
       'install.method1.comment':'# runs next dev and bugside together',
       'install.method2.title':  'Split terminal mode',

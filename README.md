@@ -33,19 +33,45 @@ npx bugside dev
 
 ## Usage
 
-### Pipe from `next dev`
+### Quick setup (adds script to your project)
+
+```bash
+npx bugside init
+```
+
+This adds `"dev:debug"` to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "dev:debug": "npm run dev 2>&1 | npx bugside dev"
+  }
+}
+```
+
+Then run:
+
+```bash
+npm run dev:debug
+```
+
+### Manual: pipe from `next dev`
 
 ```bash
 npm run dev 2>&1 | npx bugside dev
 ```
 
-### With `vercel dev`
+### Manual: split terminal
 
 ```bash
-vercel dev 2>&1 | npx bugside dev
+# terminal 1
+npm run dev
+
+# terminal 2
+npx bugside dev
 ```
 
-Bugside reads stdin and automatically opens a proxy on port `3001`. Browse your app at `http://localhost:3001` instead of `localhost:3000` to capture browser and Supabase errors.
+Bugside opens a proxy on port `3001`. Browse at `http://localhost:3001` instead of `localhost:3000` to capture browser and Supabase errors.
 
 ---
 
