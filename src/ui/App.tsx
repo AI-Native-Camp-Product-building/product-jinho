@@ -53,8 +53,15 @@ export function App({ config, errors, onClear }: Props) {
 
       {/* 에러 목록 */}
       {errors.length === 0 ? (
-        <Box borderStyle="single" borderColor="gray" paddingX={2} paddingY={1}>
-          <Text dimColor>No errors — all clear</Text>
+        <Box flexDirection="column" gap={1}>
+          <Box borderStyle="round" borderColor="green" paddingX={2} paddingY={1}>
+            <Text color="green" bold>✓ No errors — all clear</Text>
+          </Box>
+          <Box gap={3} paddingX={1}>
+            {sources.map((s) => (
+              <Text key={s} color="green">✓ <Text dimColor>{s}</Text></Text>
+            ))}
+          </Box>
         </Box>
       ) : (
         <>
