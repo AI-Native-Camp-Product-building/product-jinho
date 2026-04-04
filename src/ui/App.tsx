@@ -24,9 +24,12 @@ function KeyboardHandler({
   setSelectedIdx: (i: number) => void;
   cwd: string;
 }) {
-  useApp();
+  const { exit } = useApp();
   useInput((input, key) => {
-    if (input === "q") process.exit(0);
+    if (input === "q" || (key.ctrl && input === "c")) {
+      exit();
+      process.nextTick(() => process.exit(0));
+    }
     if (input === "c") onClear();
     if (key.upArrow) setSelectedIdx(Math.max(0, selectedIdx - 1));
     if (key.downArrow) setSelectedIdx(Math.min(errors.length - 1, selectedIdx + 1));

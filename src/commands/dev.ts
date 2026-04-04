@@ -71,8 +71,10 @@ export async function runDev({ port }: DevOptions) {
     ttyStdin ? { stdin: ttyStdin, exitOnCtrlC: true } : undefined
   );
 
-  // ttyStdin이 이벤트 루프를 붙잡지 않도록
-  ttyStdin?.unref();
+  // ttyStdin raw mode 명시 설정
+  if (ttyStdin?.isTTY) {
+    try { ttyStdin.setRawMode(true); } catch {}
+  }
 
   function pushError(err: BugError) {
     const key = `${err.source}:${err.message}`;
