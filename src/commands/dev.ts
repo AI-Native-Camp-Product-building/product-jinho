@@ -30,7 +30,10 @@ function openTtyStdin(): tty.ReadStream | undefined {
   try {
     if (process.platform === "win32") return undefined;
     const fd = openSync("/dev/tty", "r+");
-    return new tty.ReadStream(fd);
+    const stream = new tty.ReadStream(fd);
+    // render 전에 raw mode 설정 필수
+    if (stream.isTTY) stream.setRawMode(true);
+    return stream;
   } catch {
     return undefined;
   }
@@ -71,10 +74,6 @@ export async function runDev({ port }: DevOptions) {
     ttyStdin ? { stdin: ttyStdin, exitOnCtrlC: true } : undefined
   );
 
-  // ttyStdin raw mode 명시 설정
-  if (ttyStdin?.isTTY) {
-    try { ttyStdin.setRawMode(true); } catch {}
-  }
 
   function pushError(err: BugError) {
     const key = `${err.source}:${err.message}`;
