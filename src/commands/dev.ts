@@ -68,8 +68,11 @@ export async function runDev({ port }: DevOptions) {
         rerender_();
       },
     }),
-    ttyStdin ? { stdin: ttyStdin } : undefined
+    ttyStdin ? { stdin: ttyStdin, exitOnCtrlC: true } : undefined
   );
+
+  // ttyStdin이 이벤트 루프를 붙잡지 않도록
+  ttyStdin?.unref();
 
   function pushError(err: BugError) {
     const key = `${err.source}:${err.message}`;
